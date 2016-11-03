@@ -94,7 +94,7 @@ def test_demo():
     # %% merge components corresponding to the same neuron
     # print(np.sum(np.abs(C_m)))
 
-    cnmf.utilities.stop_server()
+    stop_server()
 
     # npt.assert_allclose(np.sum(np.abs(C_m)),46893045.1187)
     # npt.assert_allclose(np.sum(np.abs(C)),81608618.9801)
