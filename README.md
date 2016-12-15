@@ -43,7 +43,7 @@ Recent advances in calcium imaging acquisition techniques are creating datasets 
 
 * Installation on posix
 
-   * Download and install Anaconda (Python 2.7) <http://docs.continuum.io/anaconda/install>
+   * Download and install Anaconda (Python 2.7 ot Python 3.5) <http://docs.continuum.io/anaconda/install>
 
    ```bash
    
