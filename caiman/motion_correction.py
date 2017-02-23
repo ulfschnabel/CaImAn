@@ -1776,7 +1776,5 @@ def motion_correction_piecewise(fname, splits, strides, overlaps, add_to_movie=0
         
     print('**** Done with parallel processing ****')
     print((time.time()-t1))    
-            
-    res = list(map(tile_and_correct_wrapper,pars))
 
     return fname_tot, res   
