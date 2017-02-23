@@ -148,7 +148,7 @@ class movie(ts.timeseries):
 #            self = self-min_val
 #        else:
 #            min_val=0
-
+        print('**** Motion correcting myself ****')
         if template is None:  # if template is not provided it is created
             if num_frames_template is None:
                 num_frames_template = old_div(10e7,(self.shape[1]*self.shape[2]))
@@ -1178,9 +1178,10 @@ def load(file_name,fr=30,start_time=0,meta_data=None,subindices=None,shape=None,
             return movie(images,fr=fr)
 
         elif extension == '.sbx':
+            print('**** Loading SBX movie ****')
             if subindices is not None:
                 nframes = subindices.step
-                return movie(sbxreadskip(file_name[:-4],skip = subindices.step), fr=fr)
+                return movie(sbxreadskip(file_name[:-4],nframes), fr=fr)
             else:
                 print('sbx')
                 return movie(sbxread(file_name[:-4],k = 0, n_frames = np.inf), fr=fr)
@@ -1314,6 +1315,7 @@ def sbxreadskip(filename,skip):
     '''
     Input: filename should be full path excluding .sbx
     '''
+    
     # Check if contains .sbx and if so just truncate
     if '.sbx' in filename:
         filename = filename[:-4]
@@ -1343,7 +1345,6 @@ def sbxreadskip(filename,skip):
 
     # Open File
     fo = open(filename + '.sbx')
- 
     # Note: SBX files store the values strangely, its necessary to subtract the values from the max int16 to get the correct ones
     for k in range(0, N, skip):
         fo.seek(k*nSamples, 0)
