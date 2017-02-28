@@ -329,7 +329,7 @@ def save_memmap(filenames, base_name='Yr', resize_fact=(1, 1, 1), remove_init=0,
 
     return fname_new
 
-def save_memmap_chunks(filename, base_name='Yr', resize_fact=(1, 1, 1), remove_init=0, idx_xy=None, order='F',xy_shifts=None,is_3D=False,add_to_movie=0,border_to_0=0, n_chunks=1):
+def save_memmap_chunks(filename, base_name='Yr', resize_fact=(1, 1, 1), remove_init=0, idx_xy=None, order='F',xy_shifts=None,is_3D=False,add_to_movie=0,border_to_0=0, n_chunks=1, minval = None):
 
     """ Saves efficiently a list of tif files into a memory mappable file
     Parameters
@@ -357,7 +357,8 @@ def save_memmap_chunks(filename, base_name='Yr', resize_fact=(1, 1, 1), remove_i
 
     """
 
-    #TODO: can be done online    
+    #TODO: can be done online   
+    print('Mapping file in chunks')
     print(filename)
 
     Yr=cm.load(filename,fr=1) 
@@ -371,6 +372,8 @@ def save_memmap_chunks(filename, base_name='Yr', resize_fact=(1, 1, 1), remove_i
     bins.append(T)
     
     for j in range(0,len(bins)-1):
+        print(bins[j])
+        print(bins[j+1])
         tmp = np.array(Yr[bins[j]:bins[j+1], :, :])
         if xy_shifts is not None:
             tmp=tmp.apply_shifts(xy_shifts,interpolation='cubic',remove_blanks=False)
@@ -385,11 +388,17 @@ def save_memmap_chunks(filename, base_name='Yr', resize_fact=(1, 1, 1), remove_i
             tmp = np.array(tmp)[remove_init:, idx_xy[0], idx_xy[1], idx_xy[2]]
     
         if border_to_0>0:
-            min_mov= np.nanmin(tmp)
-            tmp[:,:border_to_0,:]=min_mov
-            tmp[:,:,:border_to_0]=min_mov
-            tmp[:,:,-border_to_0:]=min_mov
-            tmp[:,-border_to_0:,:]=min_mov
+            if minval is None:
+                min_mov= np.nanmin(tmp)
+                tmp[:,:border_to_0,:]=min_mov
+                tmp[:,:,:border_to_0]=min_mov
+                tmp[:,:,-border_to_0:]=min_mov
+                tmp[:,-border_to_0:,:]=min_mov
+            else:
+                tmp[:,:border_to_0,:]=minval
+                tmp[:,:,:border_to_0]=minval
+                tmp[:,:,-border_to_0:]=minval
+                tmp[:,-border_to_0:,:]=minval
     
         fx, fy, fz = resize_fact
         if fx != 1 or fy != 1 or fz != 1:
