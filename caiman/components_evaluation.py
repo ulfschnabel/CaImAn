@@ -9,7 +9,7 @@ from __future__ import print_function
 from builtins import range
 from past.utils import old_div
 import numpy as np
-from caiman.utils.stats import mode_robust, mode_robust_fast
+from .utils.stats import mode_robust, mode_robust_fast
 from scipy.sparse import csc_matrix
 from scipy.stats import norm
 import scipy
@@ -144,7 +144,7 @@ def find_activity_intervals(C,Npeaks = 5, tB=-5, tA = 25, thres = 0.3):
     LOC = []
     for i in range(K):
         if len(L[i])>0:
-            interval = np.kron(L[i],np.ones(tA-tB,dtype=int)) + np.kron(np.ones(len(L[i]),dtype=int),np.arange(tB,tA))                        
+            interval = np.kron(L[i],np.ones(int(np.round(tA-tB)),dtype=int)) + np.kron(np.ones(len(L[i]),dtype=int),np.arange(tB,tA))                        
             interval[interval<0] = 0
             interval[interval>T-1] = T-1
             LOC.append(np.array(list(set(interval))))        
@@ -176,8 +176,11 @@ def classify_components_ep(Y,A,C,b,f,Athresh = 0.1,Npeaks = 5, tB=-5, tA = 25, t
                     indexes = indexes - set(LOC[j])
 
 
-            indexes = list(indexes)
+            indexes = np.array(list(indexes)).astype(np.int)
+             
+
             px = np.where(atemp>0)[0]
+
             mY = np.mean(Y[px,:][:,indexes],axis=-1)
             significant_samples.append(indexes)
             #rval[i] = np.corrcoef(mY,atemp[px])[0,1]
@@ -251,9 +254,9 @@ def evaluate_components(Y, traces, A, C, b, f, final_frate, remove_baseline = Tr
 
     tB = np.minimum(-2, np.floor( -5. / 30 * final_frate))
     tA = np.maximum(5, np.ceil(25. / 30 * final_frate))
-    d1,d2,T=np.shape(Y)
+    dims,T=np.shape(Y)[:-1],np.shape(Y)[-1]
     
-    Yr=np.reshape(Y,(d1*d2,T),order='F')    
+    Yr=np.reshape(Y,(np.prod(dims),T),order='F')    
 
     print('Computing event exceptionality delta')
     fitness_delta, erfc_delta,std_rr = compute_event_exceptionality(np.diff(traces,axis=1),robust_std=robust_std,N=N)

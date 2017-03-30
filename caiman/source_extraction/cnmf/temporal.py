@@ -14,8 +14,7 @@ import numpy as np
 from .deconvolution import constrained_foopsi
 from .utilities import update_order
 import sys
-import time
-from caiman.mmapping import parallel_dot_product
+from ...mmapping import parallel_dot_product
 #%%
 def make_G_matrix(T,g):
     ''' create matrix of autoregression to enforce indicator dynamics
@@ -50,9 +49,8 @@ def constrained_foopsi_parallel(arg_in):
     T=np.shape(Ytemp)[0]
     #cc_,cb_,c1_,gn_,sn_,sp_ = constrained_foopsi(Ytemp/nT, bl = bl,  c1 = c1, g = g,  sn = sn, **argss)
     cc_,cb_,c1_,gn_,sn_,sp_ = constrained_foopsi(Ytemp, bl = bl,  c1 = c1, g = g,  sn = sn, **argss)
-    gd_ = np.max(np.roots(np.hstack((1,-gn_.T))));  
-    gd_vec = gd_**list(range(T))   
-
+    gd_ = np.max(np.real(np.roots(np.hstack((1,-gn_.T)))))
+    gd_vec = gd_**list(range(T))
 
     C_ = cc_[:].T + cb_ + np.dot(c1_,gd_vec)
     Sp_ = sp_[:T].T
@@ -63,7 +61,7 @@ def constrained_foopsi_parallel(arg_in):
 
 
 #%%
-def update_temporal_components(Y, A, b, Cin, fin, bl = None,  c1 = None, g = None,  sn = None, nb = 1, ITER=2, method_foopsi='constrained_foopsi', memory_efficient=False, debug=False, dview=None,**kwargs):
+def update_temporal_components(Y, A, b, Cin, fin, bl = None,  c1 = None, g = None,  sn = None, nb = 1, ITER=2, method_foopsi='constrained_foopsi', block_size = 20000,  memory_efficient=False, debug=False, dview=None, **kwargs):
     """Update temporal components and background given spatial components using a block coordinate descent approach.
 
     Parameters
@@ -178,28 +176,34 @@ def update_temporal_components(Y, A, b, Cin, fin, bl = None,  c1 = None, g = Non
     #YrA = ((A.T.dot(Y)).T-Cin.T.dot(A.T.dot(A)))
     print ('Generating residuals')
 #    YA = (A.T.dot(Y).T)*spdiags(1./nA,0,nr+nb,nr+nb)
-
-
+        
     if 'memmap' in str(type(Y)):
-        YA = parallel_dot_product(Y,A,dview=None,block_size=20000,transpose=True)*spdiags(old_div(1.,nA),0,nr+nb,nr+nb)
+        if block_size >= 500:
+            print ('Forcing single thread for memory issues')
+            dview_res = None
+        else:
+            print ('Using thread. If memory issues set block_size larger than 500')
+            dview_res = dview
+            
+        YA = parallel_dot_product(Y,A,dview=dview_res,block_size=block_size,transpose=True)*spdiags(old_div(1.,nA),0,nr+nb,nr+nb)
     else:
         YA = (A.T.dot(Y).T)*spdiags(old_div(1.,nA),0,nr+nb,nr+nb)
     print ('Done')
-   # 
-#    print np.allclose(YA,YA1)
+
+    # print np.allclose(YA,YA1)
 
     AA = ((A.T.dot(A))*spdiags(old_div(1.,nA),0,nr+nb,nr+nb)).tocsr()
 
     YrA = YA - Cin.T.dot(AA)
     #YrA = ((A.T.dot(Y)).T-Cin.T.dot(A.T.dot(A)))*spdiags(1./nA,0,nr+1,nr+1)
 
-
-    Cin=np.array(Cin.todense())    
+    Cin=np.array(Cin.todense())
     for iter in range(ITER):
         O,lo = update_order(A.tocsc()[:,:nr])
         P_=[];
+
         for count,jo_ in enumerate(O):
-            jo=np.array(list(jo_))           
+            jo=np.array(list(jo_))
             #Ytemp = YrA[:,jo.flatten()] + (np.dot(np.diag(nA[jo]),Cin[jo,:])).T
             Ytemp = YrA[:,jo.flatten()] + Cin[jo,:].T
             Ctemp = np.zeros((np.size(jo),T))
@@ -208,31 +212,31 @@ def update_temporal_components(Y, A, b, Cin, fin, bl = None,  c1 = None, g = Non
             sntemp = btemp.copy()
             c1temp = btemp.copy()
             gtemp = np.zeros((np.size(jo),kwargs['p']));
-            nT = nA[jo]            
+            nT = nA[jo]
 
-#            args_in=[(np.squeeze(np.array(Ytemp[:,jj])), nT[jj], jj, bl[jo[jj]], c1[jo[jj]], g[jo[jj]], sn[jo[jj]], kwargs) for jj in range(len(jo))]
+            #args_in=[(np.squeeze(np.array(Ytemp[:,jj])), nT[jj], jj, bl[jo[jj]], c1[jo[jj]], g[jo[jj]], sn[jo[jj]], kwargs) for jj in range(len(jo))]
             args_in=[(np.squeeze(np.array(Ytemp[:,jj])), nT[jj], jj, None, None, None, None, kwargs) for jj in range(len(jo))]
 #            import pdb
 #            pdb.set_trace()
-            if dview is not None:                    
+            if dview is not None:
                 #
-                if debug:                
+                if debug:
 
-                    results = dview.map_async(constrained_foopsi_parallel,args_in)  
+                    results = dview.map_async(constrained_foopsi_parallel,args_in)
 
                     results.get()
 
-                    for outp in results.stdout:   
+                    for outp in results.stdout:
 
-                        print((outp[:-1]))  
+                        print((outp[:-1]))
 
-                        sys.stdout.flush()            
+                        sys.stdout.flush()
 
-                    for outp in results.stderr:   
+                    for outp in results.stderr:
 
-                        print((outp[:-1]))  
+                        print((outp[:-1]))
 
-                        sys.stderr.flush()            
+                        sys.stderr.flush()
 
                 else:
 
@@ -240,14 +244,14 @@ def update_temporal_components(Y, A, b, Cin, fin, bl = None,  c1 = None, g = Non
 
             else:
 
-                results = list(map(constrained_foopsi_parallel,args_in))            
+                results = list(map(constrained_foopsi_parallel,args_in))
 
 
             for chunk in results:
 
                 pars=dict()
 
-                C_,Sp_,Ytemp_,cb_,c1_,sn_,gn_,jj_=chunk                    
+                C_,Sp_,Ytemp_,cb_,c1_,sn_,gn_,jj_=chunk
 
                 Ctemp[jj_,:] = C_[None,:]
 
@@ -289,11 +293,10 @@ def update_temporal_components(Y, A, b, Cin, fin, bl = None,  c1 = None, g = Non
 
             S[jo,:] = Stemp
 
-#            if (np.sum(lo[:jo])+1)%1 == 0:
+#           if (np.sum(lo[:jo])+1)%1 == 0:
             print((str(np.sum(lo[:count+1])) + ' out of total ' + str(nr) + ' temporal components updated'))
 
-        ii=nr        
-
+        ii=nr
 
         #YrA[:,ii] = YrA[:,ii] + np.atleast_2d(Cin[ii,:]).T
         #cc = np.maximum(YrA[:,ii],0) 
@@ -315,10 +318,28 @@ def update_temporal_components(Y, A, b, Cin, fin, bl = None,  c1 = None, g = Non
         else:
             Cin = C
 
+    # Eliminating empty temporal components
+    A = A.toarray()
+    ff = np.where(np.sum(C, axis=1) == 0)  # remove empty components
+    if np.size(ff) > 0:
+        ff = ff[0]
+        print('eliminating {} empty temporal components!!'.format(len(ff)))
+        A = np.delete(A, list(ff), 1)
+        C = np.delete(C, list(ff), 0)
+        YrA = np.delete(YrA, list(ff), 1)
+        S = np.delete(S, list(ff), 0)
+        sn =  np.delete(sn, list(ff))
+        g = np.delete(g, list(ff))
+        bl = np.delete(bl, list(ff))
+        c1 = np.delete(c1, list(ff))
+
+        background_ff = list(filter(lambda i: i > 0, ff - nr))
+        nr = nr - (len(ff) - len(background_ff))
+
+    b = A[:, nr:]
+    A = coo_matrix(A[:,:nr])
     f = C[nr:,:]
     C = C[:nr,:]
     YrA = np.array(YrA[:,:nr]).T    
-    P_ = sorted(P_, key=lambda k: k['neuron_id']) 
 
-
-    return C,f,S,bl,c1,sn,g,YrA #,P_
+    return C,A,b,f,S,bl,c1,sn,g,YrA

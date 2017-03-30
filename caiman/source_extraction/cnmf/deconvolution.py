@@ -19,7 +19,7 @@ import sys
 #%%
 
 
-def constrained_foopsi(fluor, bl=None,  c1=None, g=None,  sn=None, p=None, method='cvxpy', bas_nonneg=True,
+def constrained_foopsi(fluor, bl=None,  c1=None, g=None,  sn=None, p=None, method='oasis', bas_nonneg=True,
                        noise_range=[.25, .5], noise_method='logmexp', lags=5, fudge_factor=1.,
                        verbosity=False, solvers=None, optimize_g=0, penalty=1, **kwargs):
     """ Infer the most likely discretized spike train underlying a fluorescence trace
@@ -295,9 +295,13 @@ def cvxpy_foopsi(fluor, g, sn, b=None, c1=None, bas_nonneg=True, solvers=None):
 
     '''
     try:
+        
         import cvxpy as cvx
+        
     except ImportError:
-        raise ImportError('cvxpy solver requires installation of cvxpy.')
+        
+        raise ImportError('cvxpy solver requires installation of cvxpy. Not working in windows at the moment.')
+    
     if solvers is None:
         solvers = ['ECOS', 'SCS']
 
@@ -617,12 +621,12 @@ def constrained_oasisAR2(y, g, sn, optimize_b=True, b_nonneg=True, optimize_g=0,
     * Friedrich J and Paninski L, NIPS 2016
     * Friedrich J, Zhou P, and Paninski L, arXiv 2016
     """
-
     T = len(y)
     d = (g[0] + sqrt(g[0] * g[0] + 4 * g[1])) / 2
     r = (g[0] - sqrt(g[0] * g[0] + 4 * g[1])) / 2
     if window is None:
         window = int(min(T, max(200, -5 / log(d))))
+
     if not optimize_g:
         g11 = (np.exp(log(d) * np.arange(1, T + 1)) * np.arange(1, T + 1)) if d == r else \
             (np.exp(log(d) * np.arange(1, T + 1)) -
@@ -638,10 +642,10 @@ def constrained_oasisAR2(y, g, sn, optimize_b=True, b_nonneg=True, optimize_g=0,
     # get initial estimate of b and lam on downsampled data using AR1 model
     if decimate > 0:
         from caiman.source_extraction.cnmf.oasis import oasisAR1, constrained_oasisAR1
-        _, s, b, aa, lam = constrained_oasisAR1(y.reshape(-1, decimate).mean(1),
-                                                d**decimate, sn / sqrt(decimate),
-                                                optimize_b=optimize_b, b_nonneg=b_nonneg,
-                                                optimize_g=optimize_g)
+        _, s, b, aa, lam = constrained_oasisAR1(
+            y[:len(y) // decimate * decimate].reshape(-1, decimate).mean(1),
+            d**decimate, sn / sqrt(decimate),
+            optimize_b=optimize_b, b_nonneg=b_nonneg, optimize_g=optimize_g)
         if optimize_g:
             from scipy.optimize import minimize
             d = aa**(1. / decimate)
@@ -660,10 +664,13 @@ def constrained_oasisAR2(y, g, sn, optimize_b=True, b_nonneg=True, optimize_g=0,
         elif decimate > 1:
             s = oasisAR1(y - b, d, lam=lam * (1 - aa) / (1 - d))[1]
         lam *= (1 - d**decimate) / f_lam
+
         # this window size seems necessary and sufficient
-        ff = np.hstack([a + np.arange(-2, 2) for a in np.where(s > s.max() / 10.)[0]])
+        possible_spikes = [x + np.arange(-2, 3) for x in np.where(s > s.max() / 10.)[0]]
+        ff = np.array(possible_spikes, dtype=np.int).ravel()
         # ff = np.hstack([a * decimate + np.arange(-decimate, decimate)
         #                 for a in np.where(s > 1e-6)[0]])
+
         ff = np.unique(ff[(ff >= 0) * (ff < T)])
         mask = np.zeros(T, dtype=bool)
         mask[ff] = True

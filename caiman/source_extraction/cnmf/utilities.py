@@ -12,13 +12,12 @@ from builtins import range
 from past.utils import old_div
 import numpy as np
 from scipy.sparse import diags,spdiags,issparse
-from caiman.source_extraction.cnmf.initialization import greedyROI
-from caiman.summary_images import local_correlations
-from caiman.base.rois import com
+from .initialization import greedyROI
+from ...base.rois import com
 import pylab as pl
 import psutil
 #%%
-def CNMFSetParms(Y, n_processes, K=30, gSig=[5, 5], ssub=1, tsub=1, p=2, p_ssub=1, p_tsub=1, thr=0.8, method_init= 'greedy_roi', nb = 1, **kwargs):
+def CNMFSetParms(Y, n_processes, K=30, gSig=[5, 5], ssub=2, tsub=2, p=2, p_ssub=2, p_tsub=2, thr=0.8, method_init= 'greedy_roi', nb = 1, n_pixels_per_process = 1000, block_size = 1000, check_nan = True, normalize_init = True, options_local_NMF = None):
     """Dictionary for setting the CNMF parameters.
     Any parameter that is not set get a default value specified
     by the dictionary default options
@@ -32,18 +31,26 @@ def CNMFSetParms(Y, n_processes, K=30, gSig=[5, 5], ssub=1, tsub=1, p=2, p_ssub=
     print(('using ' + str(n_processes) + ' processes'))
 #    n_pixels_per_process = np.prod(dims) / n_processes  # how to subdivide the work among processes
 
-    avail_memory_per_process = np.array(psutil.virtual_memory()[1])/2.**30/n_processes
-    mem_per_pix = 3.6977678498329843e-09
-    n_pixels_per_process = np.int(avail_memory_per_process/8./mem_per_pix/T)
-    n_pixels_per_process = np.int(np.minimum(n_pixels_per_process,np.prod(dims) // n_processes))
+    if n_pixels_per_process is None:                                  
+        avail_memory_per_process = np.array(psutil.virtual_memory()[1])/2.**30/n_processes
+        mem_per_pix = 3.6977678498329843e-09
+        n_pixels_per_process = np.int(avail_memory_per_process/8./mem_per_pix/T)
+        n_pixels_per_process = np.int(np.minimum(n_pixels_per_process,np.prod(dims) // n_processes))
+    
+    if block_size is None:
+        block_size = n_pixels_per_process
+
     print(('using ' + str(n_pixels_per_process) + ' pixels per process'))
+    print(('using ' + str(block_size) + ' block_size'))
 
     options = dict()
     options['patch_params'] = {
         'ssub': p_ssub,             # spatial downsampling factor
         'tsub': p_tsub,              # temporal downsampling factor
-        'only_init' : False
+        'only_init' : True,
+        'skip_refinement' : False
     }
+    
     options['preprocess_params'] = {'sn': None,                  # noise level for each pixel
                                     # range of normalized frequencies over which to average
                                     'noise_range': [0.25, 0.5],
@@ -56,46 +63,52 @@ def CNMFSetParms(Y, n_processes, K=30, gSig=[5, 5], ssub=1, tsub=1, p=2, p_ssub=
                                     'lags': 5,                     # number of autocovariance lags to be considered for time constant estimation
                                     'include_noise': False,        # flag for using noise values when estimating g
                                     'pixels': None,                 # pixels to be excluded due to saturation
+                                    'check_nan' : check_nan # whether to check for nans. The algorithm does not work with nans
+
                                     }
-    options['init_params'] = {'K': K,                                          # number of components
-                              # size of components (std of Gaussian)
-                              'gSig': gSig,
-                              # size of bounding box
+    gSig = gSig if gSig is not None else [-1, -1]
+
+    options['init_params'] = {'K': K,                  # number of components                                             
+                              'gSig': gSig,                               # size of bounding box
                               'gSiz': list(np.array(gSig, dtype=int) * 2 + 1),
                               'ssub': ssub,             # spatial downsampling factor
                               'tsub': tsub,             # temporal downsampling factor
                               'nIter': 5,               # number of refinement iterations
                               'kernel': None,           # user specified template for greedyROI
                               'maxIter': 5,              # number of HALS iterations
-                              'method' : method_init,     # can be greedy_roi or sparse_nmf
+                              'method' : method_init,     # can be greedy_roi or sparse_nmf, local_NMF 
                               'max_iter_snmf' : 500,
                               'alpha_snmf' : 10e2,
                               'sigma_smooth_snmf' : (.5,.5,.5),
                               'perc_baseline_snmf': 20,
-                              'nb' : nb                 # number of background components
+                              'nb' : nb,                 # number of background components
+                              'normalize_init': normalize_init,        # whether to pixelwise equalize the movies during initialization
+                              'options_local_NMF': options_local_NMF # dictionary with parameters to pass to local_NMF initializaer
                               }
+    
     options['spatial_params'] = {
         'dims': dims,                   # number of rows, columns [and depths]
         # method for determining footprint of spatial components ('ellipse' or 'dilate')
         'method': 'dilate',#'ellipse', 'dilate',
         'dist': 3,                       # expansion factor of ellipse
         'n_pixels_per_process': n_pixels_per_process,   # number of pixels to be processed by eacg worker
-        'medw' : (3, 3),                                # window of median filter
+        'medw' : (3,)*len(dims),                                # window of median filter
         'thr_method' : 'nrg',                           #  Method of thresholding ('max' or 'nrg')
         'maxthr' : 0.1,                                 # Max threshold
         'nrgthr' : 0.9999,                              # Energy threshold
         'extract_cc' : True,                            # Flag to extract connected components (might want to turn to False for dendritic imaging)
-        'se' : np.ones((3, 3), dtype=np.int),           # Morphological closing structuring element
-        'ss' : np.ones((3, 3), dtype=np.int),           # Binary element for determining connectivity            
+        'se' : np.ones((3,)*len(dims), dtype=np.uint8),           # Morphological closing structuring element
+        'ss' : np.ones((3,)*len(dims), dtype=np.uint8),           # Binary element for determining connectivity            
         'nb' : nb,                                      # number of background components
-        'method_ls':'lasso_lars'                        # 'nnls_L0'. Nonnegative least square with L0 penalty        
+        'method_ls':'lasso_lars',                        # 'nnls_L0'. Nonnegative least square with L0 penalty        
                                                         #'lasso_lars' lasso lars function from scikit learn
                                                         #'lasso_lars_old' lasso lars from old implementation, will be deprecated 
+                                                        
         }
     options['temporal_params'] = {
         'ITER': 2,                   # block coordinate descent iterations
         # method for solving the constrained deconvolution problem ('oasis','cvx' or 'cvxpy')
-        'method':'cvxpy', #'cvxpy', # 'oasis'
+        'method':'oasis', #'cvxpy', # 'oasis'
         # if method cvxpy, primary and secondary (if problem unfeasible for approx
         # solution) solvers to be used with cvxpy, can be 'ECOS','SCS' or 'CVXOPT'
         'solvers': ['ECOS', 'SCS'],
@@ -109,7 +122,8 @@ def CNMFSetParms(Y, n_processes, K=30, gSig=[5, 5], ssub=1, tsub=1, p=2, p_ssub=
         'lags': 5,                   # number of autocovariance lags to be considered for time constant estimation
         'fudge_factor': .96,         # bias correction factor (between 0 and 1, close to 1)
         'nb' : nb,                   # number of background components               
-        'verbosity': False
+        'verbosity': False,
+        'block_size' : block_size # number of pixels to process at the same time for dot product. Make it smaller if memory problems
     }
     options['merging'] = {
         'thr': thr,
