@@ -32,8 +32,11 @@ import pylab as pl
 from skimage.external.tifffile import imread
 from tqdm import tqdm
 from . import timeseries
-
-
+try:
+    import sima
+    HAS_SIMA = True
+except ImportError:
+    HAS_SIMA = False
 
 from skimage.transform import warp, AffineTransform
 from skimage.feature import match_template
@@ -42,10 +45,10 @@ from skimage import data
 from . import timeseries as ts
 from .traces import trace
 
-from caiman.mmapping import load_memmap
-from caiman.utils import visualization
-import caiman.summary_images as si 
-from caiman.motion_correction import apply_shift_online,motion_correct_online
+from ..mmapping import load_memmap
+from ..utils import visualization
+from .. import summary_images as si
+from ..motion_correction import apply_shift_online,motion_correct_online
 
 class movie(ts.timeseries):
     """
@@ -371,10 +374,13 @@ class movie(ts.timeseries):
                 print(("Frame %i"%(i+1)));
 
             sh_x_n, sh_y_n = shifts[i]
-
+            
             if method == 'opencv':
                 M = np.float32([[1,0,sh_y_n],[0,1,sh_x_n]])
-                self[i] = cv2.warpAffine(frame,M,(w,h),flags=interpolation)
+                min_,max_ = np.min(frame),np.max(frame)
+                self[i] = np.clip(cv2.warpAffine(frame,M,(w,h),flags=interpolation),min_,max_)
+#                self[i] = cv2.warpAffine(frame,M,(w,h),flags=interpolation)
+
             elif method == 'skimage':
 
                 tform = AffineTransform(translation=(-sh_y_n,-sh_x_n))
@@ -1038,7 +1044,7 @@ class movie(ts.timeseries):
 
 
 
-def load(file_name,fr=30,start_time=0,meta_data=None,subindices=None,shape=None,num_frames_sub_idx=np.inf, var_name_hdf5 = 'mov'):
+def load(file_name,fr=30,start_time=0,meta_data=None,subindices=None,shape=None,num_frames_sub_idx=np.inf, var_name_hdf5 = 'mov', in_memory = False):
     '''
     load movie from file. SUpports a variety of formats. tif, hdf5, npy and memory mapped. Matlab is experimental. 
 
@@ -1119,10 +1125,16 @@ def load(file_name,fr=30,start_time=0,meta_data=None,subindices=None,shape=None,
             cv2.destroyAllWindows()
 
         elif extension == '.npy': # load npy file
-            if subindices is not None:
-                input_arr=np.load(file_name)[subindices]
+            if fr is None:
+                fr = 30
+            if in_memory:
+                input_arr =  np.load(file_name)
             else:
-                input_arr=np.load(file_name)
+                input_arr =  np.load(file_name,mmap_mode='r')
+                
+            if subindices is not None:
+                input_arr=input_arr[subindices]
+          
             if input_arr.ndim==2:
                 if shape is not None:
                     d,T=np.shape(input_arr)
@@ -1173,7 +1185,11 @@ def load(file_name,fr=30,start_time=0,meta_data=None,subindices=None,shape=None,
             Yr, dims, T = load_memmap(os.path.join(os.path.split(file_name)[0],filename))
             d1, d2 = dims
             images = np.reshape(Yr.T, [T] + list(dims), order='F')
-
+            
+            if in_memory:
+                print('loading in memory')
+                images = np.array(images)
+            
             print('mmap')
             return movie(images,fr=fr)
 
@@ -1185,8 +1201,16 @@ def load(file_name,fr=30,start_time=0,meta_data=None,subindices=None,shape=None,
             else:
                 print('sbx')
                 return movie(sbxread(file_name[:-4],k = 0, n_frames = np.inf), fr=fr)
-            
 
+        elif extension == '.sima':
+            if not HAS_SIMA:
+                raise Exception("sima module unavailable")
+
+            dataset = sima.ImagingDataset.load(file_name)
+            if subindices is None:
+                input_arr = np.array(dataset.sequences[0]).squeeze()
+            else:
+                input_arr = np.array(dataset.sequences[0])[subindices, :, :, :, :].squeeze()
 
         else:
             raise Exception('Unknown file type')

@@ -19,7 +19,13 @@ import cv2
 
 import collections
 import caiman as cm
-import tifffile
+
+try:
+    import tifffile
+except:
+    print('tifffile package not found, using skimage.external.tifffile')
+    from skimage.external import tifffile as tifffile
+    
 import gc
 import os
 import time
@@ -32,7 +38,6 @@ from cv2 import dft as fftn
 from cv2 import idft as ifftn
 opencv = True
 from numpy.fft import ifftshift
-from skimage.external.tifffile import TiffFile
 import itertools
 
 #%%
@@ -42,7 +47,8 @@ def apply_shift_iteration(img,shift,border_nan=False):
     sh_x_n,sh_y_n = shift
     w_i,h_i=img.shape
     M = np.float32([[1,0,sh_y_n],[0,1,sh_x_n]])    
-    img = cv2.warpAffine(img,M,(h_i,w_i),flags=cv2.INTER_CUBIC)
+    min_,max_ = np.min(img),np.max(img)
+    img = np.clip(cv2.warpAffine(img,M,(h_i,w_i),flags=cv2.INTER_CUBIC),min_,max_)
     if border_nan:  
         max_w,max_h,min_w,min_h=0,0,0,0
         max_h,max_w = np.ceil(np.maximum((max_h,max_w),shift)).astype(np.int)
@@ -351,8 +357,8 @@ def motion_correct_iteration(img,template,frame_num,max_shift_w=25,max_shift_h=2
         sh_y_n = -(sh_y - ms_w)
 
     M = np.float32([[1,0,sh_y_n],[0,1,sh_x_n]])
-
-    new_img = cv2.warpAffine(img,M,(w_i,h_i),flags=cv2.INTER_CUBIC)
+    min_,max_ = np.min(img),np.max(img)
+    new_img = np.clip(cv2.warpAffine(img,M,(w_i,h_i),flags=cv2.INTER_CUBIC),min_,max_)
 
     new_templ=template*frame_num/(frame_num + 1) + 1./(frame_num + 1)*new_img     
     shift=[sh_x_n,sh_y_n]
@@ -1342,7 +1348,10 @@ def tile_and_correct(img,template, strides, overlaps,max_shifts, newoverlaps = N
             cv2.waitKey(int(1./500*1000))      
 
         else:
-            cv2.destroyAllWindows()
+            try:
+                cv2.destroyAllWindows()
+            except:
+                pass
     #    xx,yy = np.array(start_step)[:,0]+newshapes[0]/2,np.array(start_step)[:,1]+newshapes[1]/2
     #    pl.cla()
     #    pl.imshow(new_img,vmin = 200, vmax = 500 ,cmap = 'gray',origin = 'lower')
@@ -1447,7 +1456,7 @@ def compute_metrics_motion_correction(fname,final_size_x,final_size_y, swap_dim,
     return tmpl, correlations, flows, norms, smoothness
 
 #%% motion correction in batches
-def motion_correct_batch_rigid(fname, max_shifts, dview = None, splits = 56 ,num_splits_to_process = None, num_iter = 1,  template = None, shifts_opencv = False, save_movie_rigid = False):
+def motion_correct_batch_rigid(fname, max_shifts, dview = None, splits = 56 ,num_splits_to_process = None, num_iter = 1,  template = None, shifts_opencv = False, save_movie_rigid = False, add_to_movie = None):
     """
     Function that perform memory efficient hyper parallelized rigid motion corrections while also saving a memory mappable file
 
@@ -1510,7 +1519,9 @@ def motion_correct_batch_rigid(fname, max_shifts, dview = None, splits = 56 ,num
         template = cm.motion_correction.bin_median(m.motion_correct(max_shifts[0],max_shifts[1],template=None)[0])
     
     new_templ = template
-    add_to_movie=-np.min(template)
+    if add_to_movie is None:
+        add_to_movie=-np.min(template)
+
     if np.isnan(add_to_movie):
         raise Exception('The movie contains nans. Nans are not allowed!')
     else:
@@ -1640,8 +1651,9 @@ def motion_correct_batch_pwrigid(fname, max_shifts, strides, overlaps, add_to_mo
         old_templ = new_templ.copy()
     
         if iter_ == num_iter-1:
-            save_movie = save_movie           
-            print('saving!')
+            save_movie = save_movie
+            if save_movie:
+                print('saving mmap of ' + fname)
     
     
         print('**** Calling motion_correction_piecewise ****')
@@ -1684,8 +1696,6 @@ def tile_and_correct_wrapper(params):
     except:
         1 #'Open CV is naturally single threaded'
 
-    from caiman.motion_correction import tile_and_correct
-
     img_name,  out_fname,idxs, shape_mov, template, strides, overlaps, max_shifts,\
         add_to_movie,max_deviation_rigid,upsample_factor_grid, newoverlaps, newstrides,shifts_opencv  = params
 
@@ -1725,19 +1735,33 @@ def motion_correction_piecewise(fname, splits, strides, overlaps, add_to_movie=0
 
     name, extension = os.path.splitext(fname)[:2]
 
-    if extension == '.tif' or extension == '.tiff':  # check if tiff file
-       with TiffFile(fname) as tf:
-         d1,d2 = tf[0].shape
-         T = len(tf)    
+    if extension == '.tif' or extension == '.tiff':  # check if tiff file       
+        
+        with tifffile.TiffFile(fname) as tf:
+           d1,d2 = tf[0].shape
+           T = len(tf)    
+           
     elif extension == '.sbx':  # check if sbx file
-         shape = cm.base.movies.sbxshape(name)
-
-         d1 = shape[1]
-         d2 = shape[0]
-         T = shape[2]
          
+        shape = cm.base.movies.sbxshape(name)
+        d1 = shape[1]
+        d2 = shape[0]
+        T = shape[2]
+
+    elif extension == '.npy':
+        raise Exception('Numpy not supported at the moment')
+#        shape = np.load(fname,mmap_mode='r').shape
+#        d1 = shape[1]
+#        d2 = shape[2]
+#        T = shape[0]               
+    else:
+        raise Exception('Unsupported file extension for parallel motion correction')
+        
+        
     if type(splits) is int:
+        
          idxs = np.array_split(list(range(T)),splits)
+    
     else:
          idxs = splits
          save_movie = False
@@ -1768,13 +1792,16 @@ def motion_correction_piecewise(fname, splits, strides, overlaps, add_to_movie=0
       pars.append([fname,fname_tot,idx,shape_mov, template, strides, overlaps, max_shifts, np.array(add_to_movie,dtype = np.float32),max_deviation_rigid,upsample_factor_grid, newoverlaps, newstrides, shifts_opencv ])
 
     t1 = time.time()
-    print('**** Starting parallel processing ****')
+    
     if dview is not None:
+    
         res =dview.map_sync(tile_and_correct_wrapper,pars)
+    
     else:
         res = list(map(tile_and_correct_wrapper,pars))
         
     print('**** Done with parallel processing ****')
     print((time.time()-t1))    
+
 
     return fname_tot, res   

@@ -84,7 +84,7 @@ pl.show()
 #%% UPDATE SPATIAL COMPONENTS
 pl.close()
 t1 = time()
-A,b,Cin = cse.spatial.update_spatial_components(Yr, Cin, f_in, Ain, sn=sn, **options['spatial_params'])
+A,b,Cin,f_in = cse.spatial.update_spatial_components(Yr, Cin, f_in, Ain, sn=sn, **options['spatial_params'])
 t_elSPATIAL = time() - t1
 print(t_elSPATIAL) 
 plt.figure()
@@ -94,7 +94,7 @@ pl.close()
 t1 = time()
 options['temporal_params']['p'] = 0 # set this to zero for fast updating without deconvolution
 options['temporal_params']['fudge_factor'] = 0.96 
-C,f,S,bl,c1,neurons_sn,g,YrA = cse.temporal.update_temporal_components(Yr,A,b,Cin,f_in,bl=None,c1=None,sn=None,g=None,**options['temporal_params'])
+C,A,b,f,S,bl,c1,neurons_sn,g,YrA = cse.temporal.update_temporal_components(Yr,A,b,Cin,f_in,bl=None,c1=None,sn=None,g=None,**options['temporal_params'])
 t_elTEMPORAL = time() - t1
 print(t_elTEMPORAL) 
 #%% merge components corresponding to the same neuron
@@ -109,9 +109,9 @@ crd = cse.plot_contours(A_m,Cn,thr=0.9)
 #%% refine spatial and temporal 
 pl.close()
 t1 = time()
-A2,b2,C2 = cse.spatial.update_spatial_components(Yr, C_m, f, A_m, sn=sn, **options['spatial_params'])
+A2,b2,C2,f = cse.spatial.update_spatial_components(Yr, C_m, f, A_m, sn=sn, **options['spatial_params'])
 options['temporal_params']['p'] = p # set it back to original value to perform full deconvolution
-C2,f2,S2,bl2,c12,neurons_sn2,g21,YrA = cse.temporal.update_temporal_components(Yr,A2,b2,C2,f,bl=None,c1=None,sn=None,g=None,**options['temporal_params'])
+C2,A2,b2,f2,S2,bl2,c12,neurons_sn2,g21,YrA = cse.temporal.update_temporal_components(Yr,A2,b2,C2,f,bl=None,c1=None,sn=None,g=None,**options['temporal_params'])
 print((time() - t1))
 #%%
 A_or, C_or, srt = cse.utilities.order_components(A2,C2)

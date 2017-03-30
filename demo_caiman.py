@@ -126,7 +126,7 @@ pl.show()
 #%% UPDATE SPATIAL COMPONENTS
 #pl.close()
 t1 = time()
-A,b,Cin = cm.source_extraction.cnmf.spatial.update_spatial_components(Yr, Cin, f_in, Ain, sn=sn, dview=dview,**options['spatial_params'])
+A,b,Cin,f_in = cm.source_extraction.cnmf.spatial.update_spatial_components(Yr, Cin, f_in, Ain, sn=sn, dview=dview,**options['spatial_params'])
 t_elSPATIAL = time() - t1
 pl.figure()
 crd = plot_contours(A,Cn)
@@ -135,7 +135,7 @@ crd = plot_contours(A,Cn)
 #pl.close()
 t1 = time()
 options['temporal_params']['p'] = 0 # set this to zero for fast updating without deconvolution
-C,f,S,bl,c1,neurons_sn,g,YrA = cm.source_extraction.cnmf.temporal.update_temporal_components(Yr,A,b,Cin,f_in,dview=dview,bl=None,c1=None,sn=None,g=None,**options['temporal_params'])
+C,A,b,f,S,bl,c1,neurons_sn,g,YrA = cm.source_extraction.cnmf.temporal.update_temporal_components(Yr,A,b,Cin,f_in,dview=dview,bl=None,c1=None,sn=None,g=None,**options['temporal_params'])
 t_elTEMPORAL = time() - t1
 print(t_elTEMPORAL) 
 #%% merge components corresponding to the same neuron
@@ -151,27 +151,46 @@ print(t_elMERGE)
 #%% refine spatial and temporal 
 #pl.close()
 t1 = time()
-A2,b2,C2 = cm.source_extraction.cnmf.spatial.update_spatial_components(Yr, C_m, f, A_m, sn=sn,dview=dview, **options['spatial_params'])
+A2,b2,C2,f = cm.source_extraction.cnmf.spatial.update_spatial_components(Yr, C_m, f, A_m, sn=sn,dview=dview, **options['spatial_params'])
 options['temporal_params']['p'] = p # set it back to original value to perform full deconvolution
-C2,f2,S2,bl2,c12,neurons_sn2,g21,YrA = cm.source_extraction.cnmf.temporal.update_temporal_components(Yr,A2,b2,C2,f,dview=dview, bl=None,c1=None,sn=None,g=None,**options['temporal_params'])
+C2,A2,b2,f2,S2,bl2,c12,neurons_sn2,g21,YrA = cm.source_extraction.cnmf.temporal.update_temporal_components(Yr,A2,b2,C2,f,dview=dview, bl=None,c1=None,sn=None,g=None,**options['temporal_params'])
 print((time() - t1))
 
 pl.figure()
 crd = plot_contours(A2.tocsc()[:,:],Cn,thr=0.9)
 
 #%%
+#%%
 final_frate = 10
-tB = np.minimum(-2,np.floor(-5./30*final_frate))
-tA = np.maximum(5,np.ceil(25./30*final_frate))
-Npeaks=10
-traces=C2+YrA
+
+Npeaks = 10
+traces = C + YrA
 #        traces_a=traces-scipy.ndimage.percentile_filter(traces,8,size=[1,np.shape(traces)[-1]/5])
 #        traces_b=np.diff(traces,axis=1)
-fitness_raw, fitness_delta, erfc_raw, erfc_delta, r_values, significant_samples = evaluate_components(Y, traces, A2, C2, b2, f2, remove_baseline=True, N=5, robust_std=False, Athresh = 0.1, Npeaks = Npeaks, tB=tB, tA = tA, thresh_C = 0.3)
+fitness_raw, fitness_delta, erfc_raw, erfc_delta, r_values, significant_samples = \
+    evaluate_components(Y, traces, A, C, b, f, final_frate, remove_baseline=True,
+                                      N=5, robust_std=False, Athresh=0.1, Npeaks=Npeaks,  thresh_C=0.3)
 
-idx_components_r=np.where(r_values>=.6)[0]
-idx_components_raw=np.where(fitness_raw<-60)[0]        
-idx_components_delta=np.where(fitness_delta<-20)[0]   
+idx_components_r = np.where(r_values >= .85)[0]
+idx_components_raw = np.where(fitness_raw < -40)[0]
+idx_components_delta = np.where(fitness_delta < -40)[0]
+
+
+#min_radius = gSig[0] - 2
+#masks_ws, idx_blobs, idx_non_blobs = extract_binary_masks_blob(
+#    A.tocsc(), min_radius, dims, num_std_threshold=1,
+#    minCircularity=0.7, minInertiaRatio=0.2, minConvexity=.5)
+
+idx_components = np.union1d(idx_components_r, idx_components_raw)
+idx_components = np.union1d(idx_components, idx_components_delta)
+#idx_blobs = np.intersect1d(idx_components, idx_blobs)
+idx_components_bad = np.setdiff1d(list(range(len(traces))), idx_components)
+
+print(' ***** ')
+print((len(traces)))
+print((len(idx_components)))
+#print((len(idx_blobs)))
+
 
 
 min_radius=gSig[0]-2
