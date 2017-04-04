@@ -1322,7 +1322,7 @@ def sbxread(filename,k = 0, n_frames=np.inf):
     nSamples = info['sz'][1] * info['recordsPerBuffer'] * 2 * info['nChan']
 
     # Open File
-    fo = open(filename + '.sbx')
+    fo = open(filename + '.sbx', 'rb')
 
     # Note: SBX files store the values strangely, its necessary to subtract the values from the max int16 to get the correct ones
     fo.seek(k*nSamples, 0)
@@ -1368,7 +1368,7 @@ def sbxreadskip(filename,skip):
     nSamples = info['sz'][1] * info['recordsPerBuffer'] * 2 * info['nChan']
 
     # Open File
-    fo = open(filename + '.sbx')
+    fo = open(filename + '.sbx', 'rb')
     # Note: SBX files store the values strangely, its necessary to subtract the values from the max int16 to get the correct ones
     for k in range(0, N, skip):
         fo.seek(k*nSamples, 0)

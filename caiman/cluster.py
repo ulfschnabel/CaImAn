@@ -379,7 +379,7 @@ def stop_server( ipcluster='ipcluster',pdir=None,profile=None):
 
     else:
         if ipcluster == "ipcluster":
-            proc = subprocess.Popen("ipcluster stop", shell=True, stderr=subprocess.PIPE, close_fds=(os.name != 'nt'))
+            proc = subprocess.Popen("ipcluster stop", shell=True, stderr=subprocess.PIPE, close_fds=(os.name != 'nt'), stdout=subprocess.PIPE, stdin=subprocess.PIPE)
         else:
             proc = subprocess.Popen(shlex.split(ipcluster + " stop"),
                                     shell=True, stderr=subprocess.PIPE, close_fds=(os.name != 'nt'))
