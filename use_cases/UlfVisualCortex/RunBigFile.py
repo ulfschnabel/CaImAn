@@ -45,7 +45,7 @@ from caiman.components_evaluation import evaluate_components
 from caiman.utils.visualization import plot_contours,view_patches_bar
 from caiman.base.rois import extract_binary_masks_blob
 #%% set parameters and create template by RIGID MOTION CORRECTION
-params_movie = {'fname':'/data/VIPA_000_2_4_6.sbx',
+params_movie = {'fname':'//VC2nin/Imagedb/Trachtenberg/20161024/VIPA/test.sbx',
                 'max_shifts':(20,20), # maximum allow rigid shift
                 'splits_rig':420, # for parallelization split the movies in  num_splits chuncks across time
                 'num_splits_to_process_rig':None, # if none all the splits are processed and the movie is saved
@@ -70,7 +70,7 @@ params_movie = {'fname':'/data/VIPA_000_2_4_6.sbx',
 c,dview,n_processes = cm.cluster.setup_cluster(backend = 'local',n_processes = None,single_thread = False)
 #%% RIGID MOTION CORRECTION
 t1 = time.time()
-fname = params_movie['fname']
+fname = os.path.join(params_movie['fname'])
 max_shifts = params_movie['max_shifts'] # maximum allowed shifts
 num_iter = 1 # number of times the algorithm is run
 splits = params_movie['splits_rig'] # for parallelization split the movies in  num_splits chuncks across time
