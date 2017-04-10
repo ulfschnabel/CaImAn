@@ -4,6 +4,7 @@ Created on Mon Nov 21 15:53:15 2016
 
 @author: agiovann
 """
+
 from __future__ import division
 from __future__ import print_function
 from builtins import zip
@@ -26,7 +27,13 @@ try:
 except NameError:
     print('Not IPYTHON')
     pass
+
+nonrigid = 0
 #%%
+#import sys
+#import os
+#sys.path.append(os.path.normpath("C:\Users\schnabel\Documents\GitHub\CaImAn"))
+
 import caiman as cm
 import numpy as np
 import os
@@ -45,7 +52,7 @@ from caiman.components_evaluation import evaluate_components
 from caiman.utils.visualization import plot_contours,view_patches_bar
 from caiman.base.rois import extract_binary_masks_blob
 #%% set parameters and create template by RIGID MOTION CORRECTION
-params_movie = {'fname':'//VC2nin/Imagedb/Trachtenberg/20161024/VIPA/test.sbx',
+params_movie = {'fname':'D:/Ulftmp/Pooper_000_6_7_8.sbx',
                 'max_shifts':(20,20), # maximum allow rigid shift
                 'splits_rig':420, # for parallelization split the movies in  num_splits chuncks across time
                 'num_splits_to_process_rig':None, # if none all the splits are processed and the movie is saved
@@ -67,10 +74,10 @@ params_movie = {'fname':'//VC2nin/Imagedb/Trachtenberg/20161024/VIPA/test.sbx',
                 'final_frate' : 30                          
                 }
 #%% start local cluster
-c,dview,n_processes = cm.cluster.setup_cluster(backend = 'local',n_processes = None,single_thread = False)
+c,dview,n_processes = cm.cluster.setup_cluster(backend = 'local',n_processes = 20,single_thread = False)
 #%% RIGID MOTION CORRECTION
 t1 = time.time()
-fname = os.path.join(params_movie['fname'])
+fname = os.path.normpath(params_movie['fname'])
 max_shifts = params_movie['max_shifts'] # maximum allowed shifts
 num_iter = 1 # number of times the algorithm is run
 splits = params_movie['splits_rig'] # for parallelization split the movies in  num_splits chuncks across time
@@ -96,99 +103,106 @@ print(add_to_movie)
 #%% visualize templates
 #cm.movie(np.array(templates_rig)).play(fr = 10, gain = 10, magnification=1, offset = add_to_movie)
 #%% PIECEWISE RIGID MOTION CORRECTION
-
-t1 = time.time()
-new_templ = total_template_rig.copy()
-fname = params_movie['fname']
-strides = params_movie['strides']
-overlaps = params_movie['overlaps']
-max_shifts = params_movie['max_shifts'] # maximum allowed shifts
-shifts_opencv = True
-save_movie = True
-splits = params_movie['splits_els']
-num_splits_to_process_list = params_movie['num_splits_to_process_els']
-upsample_factor_grid = params_movie['upsample_factor_grid']
-max_deviation_rigid = params_movie['upsample_factor_grid']
-#add_to_movie = - np.min(total_template_rig)+1
-num_iter = 1
-for num_splits_to_process in num_splits_to_process_list:
-    fname_tot_els, total_template_wls, templates_els, x_shifts_els, y_shifts_els, coord_shifts_els  = cm.motion_correction.motion_correct_batch_pwrigid(fname, max_shifts, strides, overlaps, add_to_movie, newoverlaps = None,  newstrides = None,
-                                             dview = dview, upsample_factor_grid = upsample_factor_grid, max_deviation_rigid = max_deviation_rigid,
-                                             splits = splits ,num_splits_to_process = num_splits_to_process, num_iter = num_iter,
-                                             template = new_templ, shifts_opencv = shifts_opencv, save_movie = save_movie)
-    new_templ = total_template_wls
-t2 = time.time() - t1
-print(t2)
-#%%
-pl.subplot(2,1,1)
-pl.plot(x_shifts_els)
-pl.subplot(2,1,2)
-pl.plot(y_shifts_els)
-borders_pix = np.ceil(np.maximum(np.max(np.abs(x_shifts_els)),np.max(np.abs(y_shifts_els)))).astype(np.int)
-
-#%%
-m_els = cm.load(fname_tot_els) 
-downs = 100 
-cm.concatenate([m_rig.resize(1,1,downs),m_els.resize(1,1,downs)],axis = 1).play(fr = 30, gain = 25,magnification=1, offset = add_to_movie) 
-#%% compute metrics for the results
-final_size =  np.subtract(new_templ.shape,2*borders_pix)
-winsize = 100
-swap_dim = False
-resize_fact_flow = .2
-tmpl, correlations, flows_orig, norms,smoothness  = cm.motion_correction.compute_metrics_motion_correction(fname_tot_els,final_size[0],final_size[1],swap_dim, winsize=winsize , play_flow=False, resize_fact_flow=resize_fact_flow)
-tmpl, correlations, flows_orig, norms,smoothness  = cm.motion_correction.compute_metrics_motion_correction(fname_tot_rig,final_size[0],final_size[1],swap_dim, winsize=winsize , play_flow=False, resize_fact_flow=resize_fact_flow)
-tmpl, correlations, flows_orig, norms,smoothness  = cm.motion_correction.compute_metrics_motion_correction(fname,final_size[0],final_size[1],swap_dim, winsize=winsize , play_flow=False, resize_fact_flow=resize_fact_flow)
-
-#%% plot the results of metrics
-fls = [fname_tot_els[:-4]+ '_metrics.npz',fname_tot_rig[:-4]+ '_metrics.npz',fname[:-4]+ '_metrics.npz']
-for cnt,fl in enumerate(fls):
-    with np.load(fl) as ld:
-#        print(ld.keys())
-#        pl.figure()
-        print(fl)
-        print(str(np.mean(ld['norms'])) + '+/-' + str(np.std(ld['norms'])) + ' ; ' + str(ld['smoothness']) )
-        pl.subplot(len(fls),4,1+4*cnt)
-        try:
-            mean_img = np.mean(cm.load(fl[:-12]+'mmap'),0)[12:-12,12:-12]
-        except:
+if nonrigid == 1:
+    t1 = time.time()
+    new_templ = total_template_rig.copy()
+    fname = params_movie['fname']
+    strides = params_movie['strides']
+    overlaps = params_movie['overlaps']
+    max_shifts = params_movie['max_shifts'] # maximum allowed shifts
+    shifts_opencv = True
+    save_movie = True
+    splits = params_movie['splits_els']
+    num_splits_to_process_list = params_movie['num_splits_to_process_els']
+    upsample_factor_grid = params_movie['upsample_factor_grid']
+    max_deviation_rigid = params_movie['upsample_factor_grid']
+    #add_to_movie = - np.min(total_template_rig)+1
+    num_iter = 1
+    for num_splits_to_process in num_splits_to_process_list:
+        fname_tot_els, total_template_wls, templates_els, x_shifts_els, y_shifts_els, coord_shifts_els  = cm.motion_correction.motion_correct_batch_pwrigid(fname, max_shifts, strides, overlaps, add_to_movie, newoverlaps = None,  newstrides = None,
+                                                 dview = dview, upsample_factor_grid = upsample_factor_grid, max_deviation_rigid = max_deviation_rigid,
+                                                 splits = splits ,num_splits_to_process = num_splits_to_process, num_iter = num_iter,
+                                                 template = new_templ, shifts_opencv = shifts_opencv, save_movie = save_movie)
+        new_templ = total_template_wls
+    t2 = time.time() - t1
+    print(t2)
+    #%%
+    pl.subplot(2,1,1)
+    pl.plot(x_shifts_els)
+    pl.subplot(2,1,2)
+    pl.plot(y_shifts_els)
+    borders_pix = np.ceil(np.maximum(np.max(np.abs(x_shifts_els)),np.max(np.abs(y_shifts_els)))).astype(np.int)
+    
+    #%%
+    m_els = cm.load(fname_tot_els) 
+    downs = 100 
+    cm.concatenate([m_rig.resize(1,1,downs),m_els.resize(1,1,downs)],axis = 1).play(fr = 30, gain = 25,magnification=1, offset = add_to_movie) 
+    #%% compute metrics for the results
+    final_size =  np.subtract(new_templ.shape,2*borders_pix)
+    winsize = 100
+    swap_dim = False
+    resize_fact_flow = .2
+    tmpl, correlations, flows_orig, norms,smoothness  = cm.motion_correction.compute_metrics_motion_correction(fname_tot_els,final_size[0],final_size[1],swap_dim, winsize=winsize , play_flow=False, resize_fact_flow=resize_fact_flow)
+    tmpl, correlations, flows_orig, norms,smoothness  = cm.motion_correction.compute_metrics_motion_correction(fname_tot_rig,final_size[0],final_size[1],swap_dim, winsize=winsize , play_flow=False, resize_fact_flow=resize_fact_flow)
+    tmpl, correlations, flows_orig, norms,smoothness  = cm.motion_correction.compute_metrics_motion_correction(fname,final_size[0],final_size[1],swap_dim, winsize=winsize , play_flow=False, resize_fact_flow=resize_fact_flow)
+    
+    #%% plot the results of metrics
+    fls = [fname_tot_els[:-4]+ '_metrics.npz',fname_tot_rig[:-4]+ '_metrics.npz',fname[:-4]+ '_metrics.npz']
+    for cnt,fl in enumerate(fls):
+        with np.load(fl) as ld:
+    #        print(ld.keys())
+    #        pl.figure()
+            print(fl)
+            print(str(np.mean(ld['norms'])) + '+/-' + str(np.std(ld['norms'])) + ' ; ' + str(ld['smoothness']) )
+            pl.subplot(len(fls),4,1+4*cnt)
             try:
-                mean_img = np.mean(cm.load(fl[:-12]+'.tif'),0)[12:-12,12:-12]    
+                mean_img = np.mean(cm.load(fl[:-12]+'mmap'),0)[12:-12,12:-12]
             except:
                 try:
-                    mean_img = np.mean(cm.load(fl[:-12]+'.hdf5'),0)[12:-12,12:-12]     
+                    mean_img = np.mean(cm.load(fl[:-12]+'.tif'),0)[12:-12,12:-12]    
                 except:
-                    mean_img = np.mean(cm.load(fl[:-12]+'.sbx'),0)[12:-12,12:-12]  
-        lq,hq = np.nanpercentile(mean_img,[.5,99.5])
-        pl.imshow(mean_img,vmin = lq,vmax = hq)
-    #        pl.plot(ld['correlations'])
-        
-        pl.subplot(len(fls),4,4*cnt+2)
-        pl.imshow(ld['img_corr'],vmin = 0,vmax =.35)
-#        pl.colorbar()
-        pl.subplot(len(fls),4,4*cnt+3)
-#       
-        pl.plot(ld['norms'])
-        pl.subplot(len(fls),4,4*cnt+4)
-        flows = ld['flows']
-        pl.imshow(np.mean(np.sqrt(flows[:,:,:,0]**2+flows[:,:,:,1]**2),0),vmin = 0, vmax = 0.3)
-        pl.colorbar()
+                    try:
+                        mean_img = np.mean(cm.load(fl[:-12]+'.hdf5'),0)[12:-12,12:-12]     
+                    except:
+                        mean_img = np.mean(cm.load(fl[:-12]+'.sbx'),0)[12:-12,12:-12]  
+            lq,hq = np.nanpercentile(mean_img,[.5,99.5])
+            pl.imshow(mean_img,vmin = lq,vmax = hq)
+        #        pl.plot(ld['correlations'])
+            
+            pl.subplot(len(fls),4,4*cnt+2)
+            pl.imshow(ld['img_corr'],vmin = 0,vmax =.35)
+    #        pl.colorbar()
+            pl.subplot(len(fls),4,4*cnt+3)
+    #       
+            pl.plot(ld['norms'])
+            pl.subplot(len(fls),4,4*cnt+4)
+            flows = ld['flows']
+            pl.imshow(np.mean(np.sqrt(flows[:,:,:,0]**2+flows[:,:,:,1]**2),0),vmin = 0, vmax = 0.3)
+            pl.colorbar()
+            
 #%% save each chunk in F format
-
-if not params_movie.has_key('max_shifts'):
-     fnames = [params_movie['fname']]
-     border_to_0 = 0 
-elif not params_movie.has_key('overlaps'):
-     fnames = [fname_tot_rig]
-     border_to_0 = np.ceil(np.max(np.abs(shifts_rig))).astype(np.int)
-     m_els = m_rig
+if nonrigid == 1:
+    if not params_movie.has_key('max_shifts'):
+         fnames = [params_movie['fname']]
+         border_to_0 = 0 
+    elif not params_movie.has_key('overlaps'):
+         fnames = [fname_tot_rig]
+         border_to_0 = np.ceil(np.max(np.abs(shifts_rig))).astype(np.int)
+         m_els = m_rig
+    else:
+        fnames = [fname_tot_els]
+        border_to_0 = borders_pix 
+    minval = m_els.calc_min()
 else:
-    fnames = [fname_tot_els]
-    border_to_0 = borders_pix 
+    fnames = [fname_tot_rig]
+    border_to_0 = np.max(params_movie['max_shifts']).astype(np.int)
+    minval = m_rig.calc_min()
+        
 #idx_x=slice(border_nan,-border_nan,None)
 #idx_y=slice(border_nan,-border_nan,None)
 #idx_xy=(idx_x,idx_y)
 
-minval = m_els.calc_min()
+
 if minval <  0:
     add_to_movie = -minval + 10
 else:
@@ -286,6 +300,7 @@ print((len(traces)))
 print((len(idx_components)))
 #%% save results
 np.savez(os.path.join(os.path.split(fname_new)[0], os.path.split(fname_new)[1][:-4]+'results_analysis.npz'), Cn=Cn, A=A.todense(), C=C, b=b, f=f, YrA=YrA, sn=sn, d1=d1, d2=d2, idx_components=idx_components, idx_components_bad=idx_components_bad)
+scipy.io.savemat(os.path.join(os.path.split(fname_new)[0], os.path.split(fname_new)[1][:-4]+'results_analysis.mat'), dict(Cn=Cn, A=A.todense(), C=C, b=b, f=f, YrA=YrA, sn=sn, d1=d1, d2=d2, idx_components=idx_components, idx_components_bad=idx_components_bad))
 #%%
 pl.subplot(1, 2, 1)
 crd = plot_contours(A.tocsc()[:, idx_components], Cn, thr=0.9)
