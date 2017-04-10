@@ -294,7 +294,7 @@ def start_server(slurm_script=None, ipcluster="ipcluster", ncpus = None):
             p1 = subprocess.Popen(shlex.split("{0} start -n {1}".format(ipcluster, ncpus)), shell=True, close_fds=(os.name != 'nt'))
 #
         # Check that all processes have started
-        time.sleep(1)
+        time.sleep(5)
         client = ipyparallel.Client()
         while len(client) < ncpus:
             sys.stdout.write(".")

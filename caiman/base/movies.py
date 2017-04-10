@@ -1290,7 +1290,7 @@ def _todict(matobj):
             dict[strg] = elem
     return dict
 
-def sbxread(filename,k = 0, n_frames=np.inf):
+def sbxread(filename,k = 0.0, n_frames=np.inf):
     '''
     Input: filename should be full path excluding .sbx
     '''
@@ -1311,23 +1311,24 @@ def sbxread(filename,k = 0, n_frames=np.inf):
         info['nChan'] = 1; factor = 2
 
     # Determine number of frames in whole file
-    max_idx = os.path.getsize(filename + '.sbx')/info['recordsPerBuffer']/info['sz'][1]*factor/4-1
+    max_idx = (os.path.getsize(filename + '.sbx')/info['recordsPerBuffer']/info['sz'][1]*factor/4-1)
 
     # Paramters
     N = max_idx+1; #Last frame
 
-    N = np.minimum(max_idx,n_frames)
-
+    N = np.minimum(max_idx,n_frames).astype(np.int64)
 
     nSamples = info['sz'][1] * info['recordsPerBuffer'] * 2 * info['nChan']
-
+    nSamples = nSamples.astype(np.int64)
+    k = np.int64(k)
     # Open File
     fo = open(filename + '.sbx', 'rb')
 
     # Note: SBX files store the values strangely, its necessary to subtract the values from the max int16 to get the correct ones
     fo.seek(k*nSamples, 0)
     ii16 = np.iinfo(np.uint16)
-    x = ii16.max - np.fromfile(fo, dtype = 'uint16',count = int(nSamples/2*N))
+    toread = (nSamples/2*N).astype(np.int64)
+    x = ii16.max - np.fromfile(fo, dtype = 'uint16',count = toread)
 
     x = x.reshape((int(info['nChan']), int(info['sz'][1]), int(info['recordsPerBuffer']), int(N)), order = 'F')
 
@@ -1361,23 +1362,21 @@ def sbxreadskip(filename,skip):
 
     # Paramters
     N = max_idx+1; #Last frame
-
-
-
-
+    
     nSamples = info['sz'][1] * info['recordsPerBuffer'] * 2 * info['nChan']
-
+    nSamples = nSamples.astype(np.int64)
     # Open File
     fo = open(filename + '.sbx', 'rb')
     # Note: SBX files store the values strangely, its necessary to subtract the values from the max int16 to get the correct ones
     for k in range(0, N, skip):
+        k = np.int64(k)
         fo.seek(k*nSamples, 0)
         ii16 = np.iinfo(np.uint16)
         tmp = ii16.max - np.fromfile(fo, dtype = 'uint16',count = int(nSamples/2*1))
     
         tmp = tmp.reshape((int(info['nChan']), int(info['sz'][1]), int(info['recordsPerBuffer']), int(1)), order = 'F')
-        if k is 0:
-                 x = tmp;
+        if k == 0:
+                x = tmp;
         else:
                 x = np.concatenate((x, tmp), axis=3)
         
