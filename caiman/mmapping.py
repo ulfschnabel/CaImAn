@@ -398,17 +398,20 @@ def save_memmap_chunks(filename, base_name='Yr', resize_fact=(1, 1, 1), remove_i
             tmp = np.array(tmp)[remove_init:, idx_xy[0], idx_xy[1], idx_xy[2]]
     
         if border_to_0>0:
-            if minval is None:
-                min_mov= np.nanmin(tmp)
-                tmp[:,:border_to_0,:]=min_mov
-                tmp[:,:,:border_to_0]=min_mov
-                tmp[:,:,-border_to_0:]=min_mov
-                tmp[:,-border_to_0:,:]=min_mov
-            else:
-                tmp[:,:border_to_0,:]=minval
-                tmp[:,:,:border_to_0]=minval
-                tmp[:,:,-border_to_0:]=minval
-                tmp[:,-border_to_0:,:]=minval
+            
+            tmp = tmp[:,border_to_0:-border_to_0,border_to_0:-border_to_0]
+            dims = tmp.shape[1:]
+#            if minval is None:
+#                min_mov= np.nanmin(tmp)
+#                tmp[:,:border_to_0,:]=min_mov
+#                tmp[:,:,:border_to_0]=min_mov
+#                tmp[:,:,-border_to_0:]=min_mov
+#                tmp[:,-border_to_0:,:]=min_mov
+#            else:
+#                tmp[:,:border_to_0,:]=minval
+#                tmp[:,:,:border_to_0]=minval
+#                tmp[:,:,-border_to_0:]=minval
+#                tmp[:,-border_to_0:,:]=minval
     
         fx, fy, fz = resize_fact
         if fx != 1 or fy != 1 or fz != 1:
