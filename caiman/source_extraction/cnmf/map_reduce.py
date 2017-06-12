@@ -44,16 +44,13 @@ def cnmf_patches(args_in):
     logger.info('START')
 
     logger.info('Read file')
-    Yr,_,_=load_memmap(file_name)    
-
-    
-
-    Yr=Yr[idx_,:]
-    
+    Yr,_,_=load_memmap(file_name)
+  
+    Yr= Yr[idx_,:]
     
     if (np.sum(np.abs(np.diff(Yr))))>0.1:
-
-        Yr.filename=file_name
+        
+        #Yr.filename=file_name
         d,T=Yr.shape      
 
         
@@ -65,7 +62,7 @@ def cnmf_patches(args_in):
         dims = shapes #shapes[1],shapes[0],shapes[2]
         images = np.reshape(Yr.T, [T] + list(dims), order='F')
 
-        images.filename=file_name
+        #images.filename=file_name
         cnm = cnmf.CNMF(n_processes = 1, k = options['init_params']['K'], gSig = options['init_params']['gSig'], merge_thresh = options['merging']['thr'], p = p, dview = None,  Ain = None,  Cin = None, f_in = None, do_merge = True,\
                                         ssub = options['init_params']['ssub'], tsub = options['init_params']['tsub'], p_ssub = options['patch_params']['ssub'], p_tsub = options['patch_params']['tsub'], method_init = options['init_params']['method'], alpha_snmf = options['init_params']['alpha_snmf'],\
                                         rf=None,stride=None, memory_fact=1, gnb = options['init_params']['nb'],\
@@ -243,7 +240,7 @@ def run_CNMF_patches(file_name, shape, options, rf=16, stride = 4, gnb = 1, dvie
     if dview is not None:
 
         try:
-
+            
             file_res = dview.map_sync(cnmf_patches, args_in)        
             dview.results.clear()   
 
