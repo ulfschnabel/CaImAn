@@ -31,7 +31,11 @@ except NameError:
 nonrigid = 0
 #%%
 #import sys
+<<<<<<< HEAD
 #import os 
+=======
+#import os
+>>>>>>> origin/master
 #sys.path.append(os.path.normpath("C:\Users\schnabel\Documents\GitHub\CaImAn"))
 
 import caiman as cm
@@ -52,19 +56,13 @@ from caiman.components_evaluation import evaluate_components
 from caiman.utils.visualization import plot_contours,view_patches_bar
 from caiman.base.rois import extract_binary_masks_blob
 #%% set parameters and create template by RIGID MOTION CORRECTION
+
 params_movie = {'fname':'D:/Ulftmp/20171017_Jort_000_1_2_3.sbx',                
                 'max_shifts':(16,16), # maximum allow rigid shift
                 'splits_rig':420, # for parallelization split the movies in  num_splits chuncks across time
                 'num_splits_to_process_rig':None, # if none all the splits are processed and the movie is saved
                 'strides': (128,128), # intervals at which patches are laid out for motion correction
                 'overlaps': (48,48), # overlap between pathes (size of patch strides+overlaps)
-                'splits_els':420, # for parallelization split the movies in  num_splits chuncks across time
-                'num_splits_to_process_els':[28,None], # if none all the splits are processed and the movie is saved
-                'upsample_factor_grid':4, # upsample factor to avoid smearing when merging patches
-                'max_deviation_rigid':3, #maximum deviation allowed for patch with respect to rigid shift
-                'p': 1, # order of the autoregressive system  
-                'merge_thresh' : 0.8,  # merging threshold, max correlation allowed
-                'rf' : 25,  # half-size of the patches in pixels. rf=25, patches are 50x50
                 'stride_cnmf' : 5,  # amounpl.it of overlap between the patches in pixels
                 'K' : 2,  #4  number of components per patch
                 'is_dendrites': False,  # if dendritic. In this case you need to set init_method to sparse_nmf
@@ -137,6 +135,7 @@ if nonrigid == 1:
     m_els = cm.load(fname_tot_els) 
     downs = 100 
     #cm.concatenate([m_rig.resize(1,1,downs),m_els.resize(1,1,downs)],axis = 1).play(fr = 30, gain = 25,magnification=1, offset = add_to_movie) 
+
     #%% compute metrics for the results
     final_size =  np.subtract(new_templ.shape,2*borders_pix)
     winsize = 100

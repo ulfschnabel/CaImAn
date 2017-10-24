@@ -1705,7 +1705,10 @@ def tile_and_correct_wrapper(params):
     
     if extension == '.tif' or extension == '.tiff':  # check if tiff file
         imgs = imread(img_name,key = idxs)
+<<<<<<< HEAD
         imgs = np.squeeze(imgs)
+=======
+>>>>>>> origin/master
         mc = np.zeros(imgs.shape,dtype = np.float32)
         shift_info = []
     elif extension == '.sbx':  # check if sbx file
