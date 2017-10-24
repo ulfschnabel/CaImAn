@@ -1087,7 +1087,7 @@ def load(file_name,fr=30,start_time=0,meta_data=None,subindices=None,shape=None,
 
         if extension == '.tif' or extension == '.tiff':  # load avi file
             if subindices is not None:
-                input_arr = imread(file_name)[subindices, :, :]
+                input_arr = imread(file_name, key = subindices)
             else:
                 input_arr = imread(file_name)
             input_arr = np.squeeze(input_arr)
@@ -1421,7 +1421,9 @@ def to_3D(mov2D,shape,order='F'):
     """
     return np.reshape(mov2D,shape,order=order)
 
-
+def savetomat(filename):
+    
+    scipy.io.savemat(filename, dict(data=data))
 
 
 

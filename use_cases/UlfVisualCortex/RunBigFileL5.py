@@ -52,7 +52,7 @@ from caiman.components_evaluation import evaluate_components
 from caiman.utils.visualization import plot_contours,view_patches_bar
 from caiman.base.rois import extract_binary_masks_blob
 #%% set parameters and create template by RIGID MOTION CORRECTION
-params_movie = {'fname':'D:/Ulftmp/20171017_Jort_000_1_2_3.sbx',                
+params_movie = {'fname':'D:/Ulftmp/20171017_Jort_000_4_5_6.sbx',                
                 'max_shifts':(16,16), # maximum allow rigid shift
                 'splits_rig':420, # for parallelization split the movies in  num_splits chuncks across time
                 'num_splits_to_process_rig':None, # if none all the splits are processed and the movie is saved
@@ -69,7 +69,7 @@ params_movie = {'fname':'D:/Ulftmp/20171017_Jort_000_1_2_3.sbx',
                 'K' : 2,  #4  number of components per patch
                 'is_dendrites': False,  # if dendritic. In this case you need to set init_method to sparse_nmf
                 'init_method' : 'greedy_roi',
-                'gSig' : [5, 9],  # expected half size of neurons    [9, 18], #
+                'gSig' : [12, 21],  # expected half size of neurons    [9, 18], #
                 'alpha_snmf' : None,  # this controls sparsity  
                 'final_frate' : 30                          
                 }

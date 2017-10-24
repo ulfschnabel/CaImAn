@@ -52,7 +52,7 @@ from caiman.components_evaluation import evaluate_components
 from caiman.utils.visualization import plot_contours,view_patches_bar
 from caiman.base.rois import extract_binary_masks_blob
 #%% set parameters and create template by RIGID MOTION CORRECTION
-params_movie = {'fname':'D:/Ulftmp/20171017_Jort_000_1_2_3.sbx',                
+params_movie = {'fname':'D:/Ulftmp/Itsy_000_1_2_3.sbx',                
                 'max_shifts':(16,16), # maximum allow rigid shift
                 'splits_rig':420, # for parallelization split the movies in  num_splits chuncks across time
                 'num_splits_to_process_rig':None, # if none all the splits are processed and the movie is saved
@@ -66,12 +66,12 @@ params_movie = {'fname':'D:/Ulftmp/20171017_Jort_000_1_2_3.sbx',
                 'merge_thresh' : 0.8,  # merging threshold, max correlation allowed
                 'rf' : 25,  # half-size of the patches in pixels. rf=25, patches are 50x50
                 'stride_cnmf' : 5,  # amounpl.it of overlap between the patches in pixels
-                'K' : 2,  #4  number of components per patch
+                'K' : 10,  #4  number of components per patch
                 'is_dendrites': False,  # if dendritic. In this case you need to set init_method to sparse_nmf
                 'init_method' : 'greedy_roi',
-                'gSig' : [5, 9],  # expected half size of neurons    [9, 18], #
+                'gSig' : [2, 2],  # expected half size of neurons    [9, 18], #
                 'alpha_snmf' : None,  # this controls sparsity  
-                'final_frate' : 30                          
+                'final_frate' : 15                          
                 }
 #%% start local cluster
 c,dview,n_processes = cm.cluster.setup_cluster(backend = 'local',n_processes = 10,single_thread = False)

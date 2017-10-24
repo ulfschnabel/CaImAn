@@ -151,11 +151,14 @@ class timeseries(np.ndarray):
 
 
         elif extension == '.avi':
-            codec=cv2.cv.FOURCC('I','Y','U','V')
-            np.clip(self,np.percentile(self,1),np.percentile(self,99),self)
-            minn,maxx = np.min(self),np.max(self)
-            data = 255 * (self-minn)/(maxx-minn)
-            data = data.astype(np.uint8)
+            codec=cv2.VideoWriter_fourcc('I','Y','U','V')
+            if self.dtype.type is not np.uint8:
+                np.clip(self,np.percentile(self,1),np.percentile(self,99),self)
+                minn,maxx = np.min(self),np.max(self)
+                data = 255 * (self-minn)/(maxx-minn)
+                data = data.astype(np.uint8)
+            else:
+                data = self
             y,x = data[0].shape
             vw = cv2.VideoWriter(file_name, codec, self.fr, (x,y), isColor=True)
             for d in data:
