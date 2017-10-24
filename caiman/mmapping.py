@@ -435,9 +435,6 @@ def save_memmap_chunks(filename, base_name='Yr', resize_fact=(1, 1, 1), remove_i
                                 shape=(np.prod(dims), T), order=order)
         #    np.save(fname[:-3]+'npy',np.asarray(Yr))
     
-#        Remove this again!!
-        tmp = np.nan_to_num(tmp)
-    
         big_mov[:, bins[j]:bins[j+1]] = np.asarray(tmp, dtype=np.float32) + 1e-10 + add_to_movie
         big_mov.flush()
         del big_mov
@@ -447,12 +444,8 @@ def save_memmap_chunks(filename, base_name='Yr', resize_fact=(1, 1, 1), remove_i
 #        pars.append([fname_tot,d,tot_frames,mmap_fnames,ref+step,d])
 
     fname_new = fname_tot + '_frames_' + str(T) + '_.mmap'
-    if os.path.isfile(fname_new):
-        fname_new = fname_tot + '_frames_' + str(T) + '_2.mmap'
-        os.rename(fname_tot, fname_new)
-    else:
-        os.rename(fname_tot, fname_new)
-        
+    os.rename(fname_tot, fname_new)
+
     return fname_new
 #%%
 def parallel_dot_product(A,b,block_size=20000,dview=None,transpose=False):

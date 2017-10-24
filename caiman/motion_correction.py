@@ -1705,7 +1705,6 @@ def tile_and_correct_wrapper(params):
     
     if extension == '.tif' or extension == '.tiff':  # check if tiff file
         imgs = imread(img_name,key = idxs)
-        imgs = np.squeeze(imgs)
         mc = np.zeros(imgs.shape,dtype = np.float32)
         shift_info = []
     elif extension == '.sbx':  # check if sbx file
@@ -1739,12 +1738,9 @@ def motion_correction_piecewise(fname, splits, strides, overlaps, add_to_movie=0
     if extension == '.tif' or extension == '.tiff':  # check if tiff file       
         
         with tifffile.TiffFile(fname) as tf:
-
-           if len(tf) == 1:
-               T,d1,d2 = tf[0].shape
-           else:    
-               d1,d2 = tf[0].shape
-               T = len(tf)    
+           d1,d2 = tf[0].shape
+           T = len(tf)    
+           
     elif extension == '.sbx':  # check if sbx file
          
         shape = cm.base.movies.sbxshape(name)

@@ -31,7 +31,7 @@ except NameError:
 nonrigid = 0
 #%%
 #import sys
-#import os 
+#import os
 #sys.path.append(os.path.normpath("C:\Users\schnabel\Documents\GitHub\CaImAn"))
 
 import caiman as cm
@@ -52,12 +52,12 @@ from caiman.components_evaluation import evaluate_components
 from caiman.utils.visualization import plot_contours,view_patches_bar
 from caiman.base.rois import extract_binary_masks_blob
 #%% set parameters and create template by RIGID MOTION CORRECTION
-params_movie = {'fname':'D:/Ulftmp/20171017_Jort_000_1_2_3.sbx',                
-                'max_shifts':(16,16), # maximum allow rigid shift
+params_movie = {'fname':'D:/Ulftmp/Pooper_000_6_7_8.sbx',
+                'max_shifts':(20,20), # maximum allow rigid shift
                 'splits_rig':420, # for parallelization split the movies in  num_splits chuncks across time
                 'num_splits_to_process_rig':None, # if none all the splits are processed and the movie is saved
                 'strides': (128,128), # intervals at which patches are laid out for motion correction
-                'overlaps': (48,48), # overlap between pathes (size of patch strides+overlaps)
+                'overlaps': (32,32), # overlap between pathes (size of patch strides+overlaps)
                 'splits_els':420, # for parallelization split the movies in  num_splits chuncks across time
                 'num_splits_to_process_els':[28,None], # if none all the splits are processed and the movie is saved
                 'upsample_factor_grid':4, # upsample factor to avoid smearing when merging patches
@@ -65,16 +65,16 @@ params_movie = {'fname':'D:/Ulftmp/20171017_Jort_000_1_2_3.sbx',
                 'p': 1, # order of the autoregressive system  
                 'merge_thresh' : 0.8,  # merging threshold, max correlation allowed
                 'rf' : 25,  # half-size of the patches in pixels. rf=25, patches are 50x50
-                'stride_cnmf' : 5,  # amounpl.it of overlap between the patches in pixels
-                'K' : 2,  #4  number of components per patch
+                'stride_cnmf' : 6,  # amounpl.it of overlap between the patches in pixels
+                'K' : 4,  #  number of components per patch
                 'is_dendrites': False,  # if dendritic. In this case you need to set init_method to sparse_nmf
                 'init_method' : 'greedy_roi',
-                'gSig' : [5, 9],  # expected half size of neurons    [9, 18], #
+                'gSig' : [7, 7],  # expected half size of neurons    
                 'alpha_snmf' : None,  # this controls sparsity  
                 'final_frate' : 30                          
                 }
 #%% start local cluster
-c,dview,n_processes = cm.cluster.setup_cluster(backend = 'local',n_processes = 10,single_thread = False)
+c,dview,n_processes = cm.cluster.setup_cluster(backend = 'local',n_processes = 20,single_thread = False)
 #%% RIGID MOTION CORRECTION
 t1 = time.time()
 fname = os.path.normpath(params_movie['fname'])
@@ -132,11 +132,11 @@ if nonrigid == 1:
     pl.subplot(2,1,2)
     pl.plot(y_shifts_els)
     borders_pix = np.ceil(np.maximum(np.max(np.abs(x_shifts_els)),np.max(np.abs(y_shifts_els)))).astype(np.int)
-    pl.imshow(total_template_wls,cmap = 'gray',vmax = np.percentile(total_template_rig,95))  
+    
     #%%
     m_els = cm.load(fname_tot_els) 
     downs = 100 
-    #cm.concatenate([m_rig.resize(1,1,downs),m_els.resize(1,1,downs)],axis = 1).play(fr = 30, gain = 25,magnification=1, offset = add_to_movie) 
+    cm.concatenate([m_rig.resize(1,1,downs),m_els.resize(1,1,downs)],axis = 1).play(fr = 30, gain = 25,magnification=1, offset = add_to_movie) 
     #%% compute metrics for the results
     final_size =  np.subtract(new_templ.shape,2*borders_pix)
     winsize = 100
@@ -299,8 +299,8 @@ print(' ***** ')
 print((len(traces)))
 print((len(idx_components)))
 #%% save results
-#np.savez(os.path.join(os.path.split(fname_new)[0], os.path.split(fname)[1][:-4]+'results_analysis.npz'), Cn=Cn, A=A.todense(), C=C, b=b, f=f, YrA=YrA, sn=sn, d1=d1, d2=d2, idx_components=idx_components, idx_components_bad=idx_components_bad)
-scipy.io.savemat(os.path.join(os.path.split(fname_new)[0], os.path.split(fname)[1][:-4]+'.results_analysis.mat'), dict(Cn=Cn, A=A.todense(), C=C, b=b, f=f, YrA=YrA, sn=sn, d1=d1, d2=d2, idx_components=idx_components+1, idx_components_bad=idx_components_bad+1, shifts_rig = shifts_rig))
+np.savez(os.path.join(os.path.split(fname_new)[0], os.path.split(fname_new)[1][:-4]+'results_analysis.npz'), Cn=Cn, A=A.todense(), C=C, b=b, f=f, YrA=YrA, sn=sn, d1=d1, d2=d2, idx_components=idx_components, idx_components_bad=idx_components_bad)
+scipy.io.savemat(os.path.join(os.path.split(fname_new)[0], os.path.split(fname_new)[1][:-4]+'results_analysis.mat'), dict(Cn=Cn, A=A.todense(), C=C, b=b, f=f, YrA=YrA, sn=sn, d1=d1, d2=d2, idx_components=idx_components, idx_components_bad=idx_components_bad))
 #%%
 pl.subplot(1, 2, 1)
 crd = plot_contours(A.tocsc()[:, idx_components], Cn, thr=0.9)
