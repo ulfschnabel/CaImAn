@@ -52,7 +52,7 @@ from caiman.components_evaluation import evaluate_components
 from caiman.utils.visualization import plot_contours,view_patches_bar
 from caiman.base.rois import extract_binary_masks_blob
 #%% set parameters and create template by RIGID MOTION CORRECTION
-params_movie = {'fname':'D:/Ulftmp/20171017_Jort_000_1_2_3.sbx',                
+params_movie = {'fname':'D:/Ulftmp/Dana_000_002.sbx',                
                 'max_shifts':(16,16), # maximum allow rigid shift
                 'splits_rig':420, # for parallelization split the movies in  num_splits chuncks across time
                 'num_splits_to_process_rig':None, # if none all the splits are processed and the movie is saved
@@ -66,18 +66,32 @@ params_movie = {'fname':'D:/Ulftmp/20171017_Jort_000_1_2_3.sbx',
                 'merge_thresh' : 0.8,  # merging threshold, max correlation allowed
                 'rf' : 25,  # half-size of the patches in pixels. rf=25, patches are 50x50
                 'stride_cnmf' : 5,  # amounpl.it of overlap between the patches in pixels
-                'K' : 2,  #4  number of components per patch
+                'K' : 4,  #  number of components per patch
                 'is_dendrites': False,  # if dendritic. In this case you need to set init_method to sparse_nmf
                 'init_method' : 'greedy_roi',
-                'gSig' : [5, 9],  # expected half size of neurons    [9, 18], #
+                'gSig' : [5, 9],  # expected half size of neurons    
                 'alpha_snmf' : None,  # this controls sparsity  
                 'final_frate' : 30                          
                 }
 #%% start local cluster
 c,dview,n_processes = cm.cluster.setup_cluster(backend = 'local',n_processes = 10,single_thread = False)
+
+#%%Save a piece of the movie
+fname = os.path.normpath(params_movie['fname'])
+basem = cm.load(fname)
+basemovie = basem[1500:2500, :, :]
+basemovie = basemovie.resize(1,1,.2)
+#basemovie = np.clip(basemovie,np.percentile(basemovie,1),np.percentile(basemovie,99))
+maxmov=np.nanmax(basemovie)
+basemovie = basemovie/maxmov
+basemovie = basemovie*255
+basemovie = basemovie.astype(np.uint8)
+basemovie.save('Basemovie.avi')
+basemovie.play(fr = 30, gain = 1, magnification=2, offset = 0)
+
 #%% RIGID MOTION CORRECTION
 t1 = time.time()
-fname = os.path.normpath(params_movie['fname'])
+
 max_shifts = params_movie['max_shifts'] # maximum allowed shifts
 num_iter = 1 # number of times the algorithm is run
 splits = params_movie['splits_rig'] # for parallelization split the movies in  num_splits chuncks across time
@@ -89,6 +103,19 @@ fname_tot_rig, total_template_rig, templates_rig, shifts_rig = cm.motion_correct
 t2 = time.time() - t1
 print(t2)
 pl.imshow(total_template_rig,cmap = 'gray',vmax = np.percentile(total_template_rig,95))     
+#%%Save a piece of the mc movie
+mcm = cm.load(fname_tot_rig)
+mcmovie = mcm[1500:2500, :, :]
+mcmovie = mcmovie.resize(1,1,.2)
+#mcmovie = np.clip(mcmovie,np.percentile(mcmovie,1),np.percentile(mcmovie,99))
+maxmov=np.nanmax(mcmovie)
+mcmovie = mcmovie/maxmov
+mcmovie = mcmovie*255
+mcmovie = mcmovie.astype(np.uint8)
+mcmovie.save('Mcmovie.avi')
+mcmovie.play(fr = 30, gain = 1, magnification=2, offset = 0)
+
+
 #%%
 pl.close()
 pl.plot(shifts_rig)
