@@ -1,7 +1,7 @@
-from ..source_extraction.cnmf.deconvolution import constrained_foopsi
 import numpy.testing as npt
 import numpy as np
 from time import time
+from caiman.source_extraction.cnmf.deconvolution import constrained_foopsi
 
 
 def gen_data(g=[.95], sn=.2, T=1000, framerate=30, firerate=.5, b=10, N=1, seed=0):
@@ -57,13 +57,13 @@ def foo(method, p):
         y, c, s = [a[0] for a in gen_data(g, sn)]
         res = constrained_foopsi(y, g=g, sn=sn, p=p, method=method)
         npt.assert_allclose(np.corrcoef(res[0], c)[0, 1], 1, [.01, .1][i])
-        npt.assert_allclose(np.corrcoef(res[-1], s)[0, 1], 1, [.03, .3][i])
+        npt.assert_allclose(np.corrcoef(res[-2], s)[0, 1], 1, [.03, .3][i])
     print(['\n', ''][p - 1] + ' %5s AR%d   %.4fs' % (method, p, time() - t))
 
 
-def test_cvxpy():
-    foo('cvxpy', 1)
-    foo('cvxpy', 2)
+# def test_cvxpy():
+#     foo('cvxpy', 1)
+#     foo('cvxpy', 2)
 
 
 def test_oasis():
@@ -71,10 +71,10 @@ def test_oasis():
     foo('oasis', 2)
 
 
-def test_cvx():
-    try:  # test only if mosek is installed
-        import mosek
-        foo('cvx', 1)
-        foo('cvx', 2)
-    except:
-        pass
+# def test_cvx():
+#     try:  # test only if mosek is installed
+#         import mosek
+#         foo('cvx', 1)
+#         foo('cvx', 2)
+#     except:
+#         pass

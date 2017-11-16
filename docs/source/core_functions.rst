@@ -5,7 +5,7 @@ Functions that are required to operate the package at a basic level
 
 .. autosummary::
 
-   pre_processing.preprocess_data
+   source_extraction.cnmf.pre_processing.preprocess_data
 
    initialization.initialize_components
 
