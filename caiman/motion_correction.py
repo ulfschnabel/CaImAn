@@ -1520,7 +1520,7 @@ def motion_correct_batch_rigid(fname, max_shifts, dview = None, splits = 56 ,num
     
     new_templ = template
     if add_to_movie is None:
-        add_to_movie=-np.min(template)
+        add_to_movie= 0 #-np.min(template)
 
     if np.isnan(add_to_movie):
         raise Exception('The movie contains nans. Nans are not allowed!')
@@ -1705,10 +1705,7 @@ def tile_and_correct_wrapper(params):
     
     if extension == '.tif' or extension == '.tiff':  # check if tiff file
         imgs = imread(img_name,key = idxs)
-<<<<<<< HEAD
         imgs = np.squeeze(imgs)
-=======
->>>>>>> origin/master
         mc = np.zeros(imgs.shape,dtype = np.float32)
         shift_info = []
     elif extension == '.sbx':  # check if sbx file

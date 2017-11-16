@@ -53,7 +53,7 @@ from caiman.utils.visualization import plot_contours,view_patches_bar
 from caiman.base.rois import extract_binary_masks_blob
 #%% set parameters and create template by RIGID MOTION CORRECTION
 
-params_movie = {'fname':'D:/Ulftmp/20171104_Floppy_000_7_8_9.sbx',                
+params_movie = {'fname':'D:/Ulftmp/20171113_Chick_000_001.sbx',                
                 'max_shifts':(16,16), # maximum allow rigid shift
                 'splits_rig':420, # for parallelization split the movies in  num_splits chuncks across time
                 'num_splits_to_process_rig':None, # if none all the splits are processed and the movie is saved
@@ -70,7 +70,7 @@ params_movie = {'fname':'D:/Ulftmp/20171104_Floppy_000_7_8_9.sbx',
                 'K' : 2,  #4  number of components per patch
                 'is_dendrites': False,  # if dendritic. In this case you need to set init_method to sparse_nmf
                 'init_method' : 'greedy_roi',
-                'gSig' : [5, 9],  # expected half size of neurons    [9, 18], #
+                'gSig' : [4, 8],  # expected half size of neurons    [9, 18], #
                 'alpha_snmf' : None,  # this controls sparsity  
                 'final_frate' : 30                          
                 }
@@ -96,7 +96,7 @@ pl.plot(shifts_rig)
 #%%
 m_rig = cm.load(fname_tot_rig)
 #%%
-add_to_movie = - np.min(total_template_rig)+1
+add_to_movie = 0 #- np.min(total_template_rig)+1
 print(add_to_movie)
 #%% visualize movies
 
@@ -205,9 +205,9 @@ else:
 #idx_xy=(idx_x,idx_y)
 
 
-if minval <  0:
-    add_to_movie = -minval + 10
-else:
+#if minval <  0:
+#    add_to_movie = -minval + 10
+#else:
     add_to_movie = 0
 idx_xy = None
 downsample_factor = 1 # use .2 or .1 if file is large and you want a quick answer
@@ -300,9 +300,18 @@ idx_components,idx_components_bad = cm.components_evaluation.estimate_components
 print(' ***** ')
 print((len(traces)))
 print((len(idx_components)))
+
+#Max projection, mean and sd
+maxp = np.amax(images, axis=0)
+meanp = np.mean(images, axis = 0)
+stdp = np.std(images, axis = 0)
+
+from caiman.source_extraction.cnmf.utilities import extract_DF_F
+C_df = extract_DF_F(Yr, A, C)
+
 #%% save results
 #np.savez(os.path.join(os.path.split(fname_new)[0], os.path.split(fname)[1][:-4]+'results_analysis.npz'), Cn=Cn, A=A.todense(), C=C, b=b, f=f, YrA=YrA, sn=sn, d1=d1, d2=d2, idx_components=idx_components, idx_components_bad=idx_components_bad)
-scipy.io.savemat(os.path.join(os.path.split(fname_new)[0], os.path.split(fname)[1][:-4]+'.results_analysis.mat'), dict(Cn=Cn, A=A.todense(), C=C, b=b, f=f, YrA=YrA, sn=sn, d1=d1, d2=d2, idx_components=idx_components+1, idx_components_bad=idx_components_bad+1, shifts_rig = shifts_rig))
+scipy.io.savemat(os.path.join(os.path.split(fname_new)[0], os.path.split(fname)[1][:-4]+'.results_analysis.mat'), dict(Cn=Cn, A=A.todense(), C=C, C_df=C_df, b=b, f=f, YrA=YrA, sn=sn, d1=d1, d2=d2, idx_components=idx_components+1, idx_components_bad=idx_components_bad+1, shifts_rig = shifts_rig, maxp = maxp, meanp = meanp, stdp = stdp))
 #%%
 pl.subplot(1, 2, 1)
 crd = plot_contours(A.tocsc()[:, idx_components], Cn, thr=0.9)
